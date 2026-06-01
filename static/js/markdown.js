@@ -6,6 +6,7 @@
 
 import uiModule from './ui.js';
 import { splitTableRow } from './markdown/tableRow.js';
+import { expandEmojiShortcodesInHtml } from './emojiShortcodes.js';
 
 var escapeHtml = uiModule.esc;
 
@@ -628,6 +629,7 @@ export function mdToHtml(src) {
     s = s.replace(`___CODE_BLOCK_${index}___`, block);
   });
 
+  s = expandEmojiShortcodesInHtml(s);
   return _useSvgEmoji() ? svgifyEmoji(s) : s;
 }
 
