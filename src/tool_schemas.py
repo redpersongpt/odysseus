@@ -892,6 +892,8 @@ FUNCTION_TOOL_SCHEMAS = [
                 "type": "object",
                 "properties": {
                     "to": {"type": "string", "description": "Recipient email address"},
+                    "cc": {"type": "string", "description": "Optional CC recipient address(es), comma-separated"},
+                    "bcc": {"type": "string", "description": "Optional BCC recipient address(es), comma-separated"},
                     "subject": {"type": "string", "description": "Email subject line"},
                     "body": {"type": "string", "description": "Email body text"},
                     "account": {"type": "string", "description": "Optional account name/email/id from list_email_accounts, e.g. Gmail or user@example.com"},
