@@ -37,7 +37,7 @@ from routes.cookbook_helpers import (
     _validate_local_dir, _validate_ssh_port, _validate_gpus, _shell_path,
     _ps_squote, _bash_squote, _validate_serve_cmd, _parse_serve_phase,
     _safe_env_prefix, _local_tooling_path_export, _append_serve_preflight_exit_lines,
-    _append_serve_exit_code_lines, _cached_model_scan_script,
+    _append_serve_exit_code_lines, _classify_cookbook_task_status, _cached_model_scan_script,
     ModelDownloadRequest, ServeRequest,
 )
 
@@ -1863,28 +1863,7 @@ def setup_cookbook_routes() -> APIRouter:
             # when the PID is gone instead of blindly reporting "stopped".
             status = "unknown"
             if is_alive or (local_win_task and full_snapshot):
-                lower = full_snapshot.lower()
-                has_exit = "=== process exited with code" in lower
-                has_error = "error" in lower or "failed" in lower or "traceback" in lower
-                if has_exit and task_type == "serve":
-                    # Serve tasks that exit are always errors — they should run indefinitely
-                    status = "error"
-                elif has_exit and "unrecognized arguments" in lower:
-                    status = "error"
-                elif has_error and not ("application startup complete" in lower):
-                    status = "error"
-                elif task_type == "download" and ("100%" in full_snapshot or "DOWNLOAD_OK" in full_snapshot):
-                    # Only download tasks treat 100% as "completed".
-                    # Serve tasks log 100%|██████| during inference progress
-                    # (diffusion sampling, etc.) — that's "running", not done.
-                    status = "completed"
-                elif "application startup complete" in lower:
-                    status = "ready"
-                elif not is_alive:
-                    # local-Windows: process gone, log has no success/ready marker.
-                    status = "stopped"
-                else:
-                    status = "running"
+                status = _classify_cookbook_task_status(task_type, full_snapshot, is_alive)
             else:
                 # Session is dead — check if it completed or crashed
                 status = "stopped"

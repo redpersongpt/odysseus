@@ -9,6 +9,7 @@ from routes.cookbook_helpers import (
     _cached_model_scan_script,
     _append_serve_exit_code_lines,
     _append_serve_preflight_exit_lines,
+    _classify_cookbook_task_status,
     _local_tooling_path_export,
     _safe_env_prefix,
     _validate_gpus,
@@ -112,6 +113,26 @@ def test_serve_runner_preserves_command_exit_code():
     assert "ODYSSEUS_CMD_EXIT=$?" in script
     assert 'echo "=== Process exited with code $ODYSSEUS_CMD_EXIT ==="' in script
     assert 'echo "=== Process exited with code $? ==="' not in script
+
+
+def test_download_task_exit_zero_is_completed():
+    snapshot = "Successfully installed playwright\n\n=== Process exited with code 0 ==="
+    assert _classify_cookbook_task_status("download", snapshot, True) == "completed"
+
+
+def test_download_task_exit_nonzero_is_error():
+    snapshot = "Could not install package\n\n=== Process exited with code 1 ==="
+    assert _classify_cookbook_task_status("download", snapshot, True) == "error"
+
+
+def test_serve_task_exit_zero_is_error():
+    snapshot = "Application stopped\n\n=== Process exited with code 0 ==="
+    assert _classify_cookbook_task_status("serve", snapshot, True) == "error"
+
+
+def test_exit_zero_beats_successful_pip_error_wording():
+    snapshot = "Successfully installed package-with-error-in-name\n\n=== Process exited with code 0 ==="
+    assert _classify_cookbook_task_status("download", snapshot, True) == "completed"
 
 
 def test_cached_model_scan_reports_plain_dir_gguf(tmp_path):

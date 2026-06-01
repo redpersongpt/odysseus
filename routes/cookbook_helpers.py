@@ -33,6 +33,7 @@ _TOKEN_RE = re.compile(r"^[A-Za-z0-9._~+/=-]+$")
 _SESSION_ID_RE = re.compile(r"^[A-Za-z0-9_-]{1,64}$")
 _SSH_PORT_RE = re.compile(r"^\d{1,5}$")
 _GPU_LIST_RE = re.compile(r"^\d+(?:,\d+)*$")
+_PROCESS_EXIT_RE = re.compile(r"===\s*Process exited with code\s+(\d+)\s*===", re.IGNORECASE)
 # A download target directory. Absolute or ~-relative path; safe path glyphs
 # only (no quotes, shell metacharacters, or spaces) since it lands in a shell
 # command. A leading ~ is expanded to $HOME at command-build time.
@@ -325,6 +326,35 @@ def _append_serve_exit_code_lines(runner_lines: list[str], *, keep_shell_open: b
         runner_lines.append('echo ""; echo "=== Process exited with code $ODYSSEUS_CMD_EXIT ==="; exec "${SHELL:-/bin/bash}"')
     else:
         runner_lines.append('echo ""; echo "=== Process exited with code $ODYSSEUS_CMD_EXIT ==="')
+
+
+def _classify_cookbook_task_status(task_type: str, full_snapshot: str, is_alive: bool) -> str:
+    """Classify a Cookbook background task from its captured terminal output."""
+    text = full_snapshot or ""
+    lower = text.lower()
+    exit_match = _PROCESS_EXIT_RE.search(text)
+    if exit_match:
+        exit_code = int(exit_match.group(1))
+        if task_type == "serve":
+            # Serve tasks should keep running; any exit means the launch failed
+            # or the server died, even if the wrapped command returned 0.
+            return "error"
+        return "completed" if exit_code == 0 else "error"
+
+    has_error = "error" in lower or "failed" in lower or "traceback" in lower
+    if "unrecognized arguments" in lower:
+        return "error"
+    if has_error and "application startup complete" not in lower:
+        return "error"
+    if task_type == "download" and ("100%" in text or "DOWNLOAD_OK" in text):
+        # Only download tasks treat these as completion markers. Serve tasks
+        # can log progress bars during inference and should keep running.
+        return "completed"
+    if "application startup complete" in lower:
+        return "ready"
+    if not is_alive:
+        return "stopped"
+    return "running"
 
 
 class ModelDownloadRequest(BaseModel):

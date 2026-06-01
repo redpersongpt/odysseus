@@ -13,6 +13,7 @@ from routes.shell_routes import (
     _find_line_break,
     _running_in_container,
     _docker_row_status,
+    _ensure_user_site_on_path,
     _package_installed_from_probe,
     _package_status_note,
     _reject_cross_site,
@@ -193,6 +194,18 @@ class TestDockerRowStatus:
 
 class TestPackageProbeStatus:
     """Dependency rows should reflect serve readiness, not import coincidences."""
+
+    def test_created_user_site_is_added_to_sys_path(self, monkeypatch, tmp_path):
+        import site
+
+        user_site = tmp_path / "site-packages"
+        user_site.mkdir()
+        monkeypatch.setattr(site, "getusersitepackages", lambda: str(user_site))
+        monkeypatch.setattr(sys, "path", [p for p in sys.path if p != str(user_site)])
+
+        _ensure_user_site_on_path()
+
+        assert str(user_site) in sys.path
 
     def test_vllm_namespace_without_cli_is_not_installed(self):
         probe = {

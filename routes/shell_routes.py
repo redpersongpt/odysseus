@@ -127,6 +127,27 @@ def _docker_row_status(*, on_remote, in_container, installed, default_hint):
     return DockerRowStatus(applicable=True, install_hint=default_hint)
 
 
+def _ensure_user_site_on_path() -> None:
+    """Make freshly-created pip --user installs visible to dependency probes."""
+    try:
+        import importlib
+        import site
+        import sys
+
+        paths = site.getusersitepackages()
+        if isinstance(paths, str):
+            paths = [paths]
+        added = False
+        for path in paths or []:
+            if path and os.path.isdir(path) and path not in sys.path:
+                sys.path.append(path)
+                added = True
+        if added:
+            importlib.invalidate_caches()
+    except Exception:
+        pass
+
+
 def _package_installed_from_probe(name: str, probe: dict) -> bool:
     """Return whether an optional dependency is usable by Cookbook.
 
@@ -792,6 +813,7 @@ def setup_shell_routes() -> APIRouter:
         _require_admin(request)
         _reject_cross_site(request)
         import importlib, importlib.metadata as importlib_metadata, shlex, json as _json
+        _ensure_user_site_on_path()
         if ssh_port and str(ssh_port).strip() not in ("", "22"):
             _port = str(ssh_port).strip()
             if not _SSH_PORT_RE.match(_port) or not (1 <= int(_port) <= 65535):

@@ -382,6 +382,32 @@ function _refreshDepsAfterInstall(task) {
   } catch {}
 }
 
+function _applyBackendTaskStatus(t) {
+  if (!t || !t.session_id || (t.status !== 'completed' && t.status !== 'error')) return false;
+  const localTask = _loadTasks().find(lt => lt.sessionId === t.session_id);
+  if (!localTask) return false;
+  if (t.status === 'completed' && localTask.status === 'done') return false;
+  if (t.status === 'error' && localTask.status === 'error') return false;
+
+  const updates = {};
+  if (t.output_tail) updates.output = t.output_tail;
+  if (t.status === 'completed') {
+    updates.status = 'done';
+    updates.progress = '';
+  } else {
+    updates.status = 'error';
+  }
+  _updateTask(t.session_id, updates);
+  if (t.status === 'completed') _refreshDepsAfterInstall(localTask);
+  return true;
+}
+
+function _runningTabLabel(tasks) {
+  const count = tasks.filter(t => t.status === 'running' || t.status === 'queued' || t.status === 'ready' || t.status === 'error' || t.status === 'crashed').length;
+  const errCount = tasks.filter(t => t.status === 'error' || t.status === 'crashed').length;
+  return count ? `Running <span class="cookbook-tab-count">${count}</span>${errCount ? '<span class="cookbook-tab-error-dot"></span>' : ''}` : 'Running';
+}
+
 export function _removeTask(sessionId) {
   _tombstoneTask(sessionId);  // so sync/poll can't resurrect it
   const tasks = _loadTasks().filter(t => t.sessionId !== sessionId);
@@ -1158,8 +1184,7 @@ export function _renderRunningTab() {
     runTab = document.createElement('button');
     runTab.className = 'cookbook-tab';
     runTab.dataset.backend = 'Running';
-    const _errCount = tasks.filter(t => t.status === 'error' || t.status === 'crashed').length;
-    runTab.innerHTML = `Running <span class="cookbook-tab-count">${tasks.length}</span>${_errCount ? `<span class="cookbook-tab-error-dot"></span>` : ''}`;
+    runTab.innerHTML = _runningTabLabel(tasks);
     tabBar.insertBefore(runTab, tabBar.firstChild);
     runTab.addEventListener('click', () => {
       tabBar.querySelectorAll('.cookbook-tab').forEach(t => t.classList.remove('active'));
@@ -1169,8 +1194,7 @@ export function _renderRunningTab() {
       });
     });
   } else if (runTab) {
-    const _errCount2 = tasks.filter(t => t.status === 'error' || t.status === 'crashed').length;
-    runTab.innerHTML = tasks.length ? `Running <span class="cookbook-tab-count">${tasks.length}</span>${_errCount2 ? '<span class="cookbook-tab-error-dot"></span>' : ''}` : 'Running';
+    runTab.innerHTML = tasks.length ? _runningTabLabel(tasks) : 'Running';
     if (!hasContent) {
       if (runTab.classList.contains('active')) {
         const wfTab = tabBar.querySelector('.cookbook-tab[data-backend="Search"]');
@@ -2547,6 +2571,11 @@ async function _pollBackgroundStatus() {
     if (!res.ok) return;
     const data = await res.json();
     const tasks = data.tasks || [];
+    let reconciled = false;
+    for (const t of tasks) {
+      if (_applyBackendTaskStatus(t)) reconciled = true;
+    }
+    if (reconciled) _renderRunningTab();
 
     const statusEl = document.getElementById('cookbook-bg-status');
     const activeTasks = tasks.filter(t => t.status === 'running' || t.status === 'ready');
