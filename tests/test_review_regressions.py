@@ -26,6 +26,10 @@ class _FakeModelEndpoint:
     owner = _FakeColumn("owner")
 
 
+class _FakeDbSession:
+    endpoint_url = _FakeColumn("endpoint_url")
+
+
 class _FakeQuery:
     def __init__(self, rows):
         self.rows = list(rows)
@@ -68,6 +72,7 @@ def _install_model_route_import_stubs(monkeypatch):
     db_mod = types.ModuleType("core.database")
     db_mod.SessionLocal = lambda: _FakeDb([])
     db_mod.ModelEndpoint = _FakeModelEndpoint
+    db_mod.Session = _FakeDbSession
     middleware_mod = types.ModuleType("core.middleware")
     middleware_mod.require_admin = lambda request: None
     multipart_mod = types.ModuleType("python_multipart")
