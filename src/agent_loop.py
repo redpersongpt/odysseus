@@ -457,6 +457,7 @@ _API_HOSTS = frozenset([
     "api.together.xyz", "api.fireworks.ai",
     "api.perplexity.ai", "api.x.ai",
     "ollama.com",
+    "localhost", "127.0.0.1", "host.docker.internal", "[::1]",
 ])
 _MCP_KEYWORDS = frozenset(["browse", "browser", "website", "calendar", "event", "email",
                            "gmail", "screenshot", "navigate", "click", "miniflux", "rss", "feed"])

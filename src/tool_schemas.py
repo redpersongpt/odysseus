@@ -421,6 +421,47 @@ FUNCTION_TOOL_SCHEMAS = [
     {
         "type": "function",
         "function": {
+            "name": "manage_notes",
+            "description": "Manage notes, checklists, todos, and one-off reminders. Use this for 'create a note', 'add a todo', 'make a checklist', and 'remind me to ...'. For reminders, pass a short title plus due_date; do not store note content in memory.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "action": {
+                        "type": "string",
+                        "enum": ["list", "add", "update", "delete", "toggle_item"],
+                        "description": "Action to perform. Use add for new notes, todos, checklists, and reminders."
+                    },
+                    "id": {"type": "string", "description": "Note ID prefix for update, delete, or toggle_item"},
+                    "title": {"type": "string", "description": "Short note/reminder title"},
+                    "content": {"type": "string", "description": "Longer note body"},
+                    "text": {"type": "string", "description": "Single-string note content; used as title when title/content are omitted"},
+                    "note_type": {"type": "string", "enum": ["note", "checklist", "todo"], "description": "Kind of note to create or update"},
+                    "items": {
+                        "type": "array",
+                        "description": "Checklist items for note_type=checklist",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "text": {"type": "string", "description": "Checklist item text"},
+                                "done": {"type": "boolean", "description": "Whether the item is complete"}
+                            },
+                            "required": ["text"]
+                        }
+                    },
+                    "index": {"type": "integer", "description": "Checklist item index for toggle_item"},
+                    "label": {"type": "string", "description": "Optional note label"},
+                    "color": {"type": "string", "description": "Optional note color"},
+                    "due_date": {"type": "string", "description": "Natural language or ISO date/time for reminders, e.g. 'tomorrow at 1pm'"},
+                    "pinned": {"type": "boolean", "description": "Whether the note should be pinned"},
+                    "archived": {"type": "boolean", "description": "Whether to list or update archived notes"}
+                },
+                "required": ["action"]
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
             "name": "manage_calendar",
             "description": "Manage calendar events: list events in a date range, create, update, delete. Each event can carry a tag/category (event_type) and importance level. Use ISO 8601 datetimes; for all-day events set all_day=true and pass YYYY-MM-DD. For event reminders/alarms, pass reminder_minutes; the tool creates the Odysseus note reminder, so do not also call manage_notes for the same reminder.",
             "parameters": {
