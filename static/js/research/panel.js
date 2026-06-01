@@ -52,6 +52,7 @@ function _saveSettingsToStorage() {
     const activeCat = document.querySelector('.research-cat.active');
     localStorage.setItem(_SETTINGS_KEY, JSON.stringify({
       max_rounds: document.getElementById('research-rounds')?.value || '0',
+      max_time: document.getElementById('research-max-time')?.value || '300',
       search_provider: document.getElementById('research-search-provider')?.value || '',
       endpoint_id: document.getElementById('research-endpoint')?.value || '',
       model: document.getElementById('research-model')?.value || '',
@@ -332,6 +333,16 @@ function _buildPanelHTML() {
   for (let i = 1; i <= 20; i++) {
     roundOpts += `<option value="${i}">${i}</option>`;
   }
+  const savedSettings = _loadSettingsFromStorage() || {};
+  const selectedMaxTime = String(savedSettings.max_time || '300');
+  const timeLimitOpts = [
+    ['300', '5 min'],
+    ['600', '10 min'],
+    ['900', '15 min'],
+    ['1800', '30 min'],
+  ].map(([value, label]) =>
+    `<option value="${value}"${value === selectedMaxTime ? ' selected' : ''}>${label}</option>`
+  ).join('');
 
   const settingsHidden = _settingsCollapsed ? ' style="display:none"' : '';
   const chevronCls = _settingsCollapsed ? ' collapsed' : '';
@@ -369,6 +380,10 @@ function _buildPanelHTML() {
           <label class="research-setting">
             <span class="research-setting-label">Rounds</span>
             <select id="research-rounds">${roundOpts}</select>
+          </label>
+          <label class="research-setting">
+            <span class="research-setting-label">Time limit</span>
+            <select id="research-max-time">${timeLimitOpts}</select>
           </label>
           <label class="research-setting">
             <span class="research-setting-label">Search engine</span>
@@ -469,6 +484,7 @@ function _readSettings() {
   const category = activeCat?.dataset.cat || undefined;
   const settings = {
     max_rounds: parseInt(document.getElementById('research-rounds')?.value || '0', 10),
+    max_time: parseInt(document.getElementById('research-max-time')?.value || '300', 10),
     search_provider: document.getElementById('research-search-provider')?.value || undefined,
     endpoint_id: document.getElementById('research-endpoint')?.value || undefined,
     model: document.getElementById('research-model')?.value || undefined,
@@ -512,6 +528,8 @@ function _editJob(job) {
   const s = job.settings || {};
   const roundsEl = document.getElementById('research-rounds');
   if (roundsEl && s.max_rounds) roundsEl.value = s.max_rounds;
+  const maxTimeEl = document.getElementById('research-max-time');
+  if (maxTimeEl && s.max_time) maxTimeEl.value = s.max_time;
   const spEl = document.getElementById('research-search-provider');
   if (spEl && s.search_provider) spEl.value = s.search_provider;
   const epEl = document.getElementById('research-endpoint');
@@ -600,6 +618,8 @@ function _restoreSavedSettings() {
   }
   // Rounds intentionally defaults to "Auto" on every open — don't restore.
   // Users can pick a specific cap each time if needed.
+  const maxTime = document.getElementById('research-max-time');
+  if (maxTime && saved.max_time !== undefined) maxTime.value = saved.max_time;
   const search = document.getElementById('research-search-provider');
   if (search && saved.search_provider !== undefined) search.value = saved.search_provider;
   const ep = document.getElementById('research-endpoint');

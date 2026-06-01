@@ -393,12 +393,14 @@ def setup_research_routes(research_handler, session_manager=None) -> APIRouter:
 
         # max_rounds=0 → "Auto", let AI decide; pass 20 as the safety cap.
         effective_max_rounds = body.max_rounds if body.max_rounds > 0 else 20
+        hard_timeout = max(600, body.max_time + 60)
         research_handler.start_research(
             session_id=session_id,
             query=body.query,
             llm_endpoint=ep_url,
             llm_model=ep_model,
             max_time=body.max_time,
+            hard_timeout=hard_timeout,
             llm_headers=ep_headers,
             max_rounds=effective_max_rounds,
             search_provider=body.search_provider or None,
