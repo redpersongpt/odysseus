@@ -1,11 +1,15 @@
 import importlib.machinery
+import importlib.util
 from pathlib import Path
 
 
 def _load_preset_cli():
     path = Path(__file__).resolve().parent.parent / "scripts" / "odysseus-preset"
     loader = importlib.machinery.SourceFileLoader("odysseus_preset_invalid_entries", str(path))
-    return loader.load_module()
+    spec = importlib.util.spec_from_loader(loader.name, loader)
+    module = importlib.util.module_from_spec(spec)
+    loader.exec_module(module)
+    return module
 
 
 def test_entry_or_fail_rejects_non_object_entries():
