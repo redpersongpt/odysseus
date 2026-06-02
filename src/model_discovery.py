@@ -24,6 +24,15 @@ def _parse_tailscale_status(raw: str) -> Dict[str, Any]:
     return data if isinstance(data, dict) else {}
 
 
+def _first_tailscale_ipv4(value: Any) -> Optional[str]:
+    if not isinstance(value, list):
+        return None
+    for ip in value:
+        if isinstance(ip, str) and "." in ip:
+            return ip
+    return None
+
+
 def discover_tailscale_hosts() -> List[str]:
     """Discover online Tailscale peers, returning their IPv4 addresses."""
     global _hosts_cache, _hosts_cache_time
@@ -47,11 +56,9 @@ def discover_tailscale_hosts() -> List[str]:
 
         # Add self
         self_data = data.get("Self") if isinstance(data.get("Self"), dict) else {}
-        self_ips = self_data.get("TailscaleIPs", [])
-        for ip in self_ips:
-            if "." in ip:  # IPv4 only
-                hosts.append(ip)
-                break
+        self_ip = _first_tailscale_ipv4(self_data.get("TailscaleIPs"))
+        if self_ip:
+            hosts.append(self_ip)
 
         # Add online peers (skip funnel-ingress-nodes and android devices)
         peers = data.get("Peer") if isinstance(data.get("Peer"), dict) else {}
@@ -66,11 +73,9 @@ def discover_tailscale_hosts() -> List[str]:
             os_name = peer.get("OS", "")
             if os_name == "android":
                 continue
-            peer_ips = peer.get("TailscaleIPs", [])
-            for ip in peer_ips:
-                if "." in ip:  # IPv4 only
-                    hosts.append(ip)
-                    break
+            peer_ip = _first_tailscale_ipv4(peer.get("TailscaleIPs"))
+            if peer_ip:
+                hosts.append(peer_ip)
 
         _hosts_cache = hosts
         _hosts_cache_time = now
