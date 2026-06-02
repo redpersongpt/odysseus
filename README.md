@@ -57,6 +57,8 @@ Use that for the first login, then change it in **Settings**.
 Contributing? See [CONTRIBUTING.md](CONTRIBUTING.md) for setup, testing, and
 pull request guidelines.
 
+New to GitHub or Terminal? Start with the [beginner setup guide](docs/beginner-setup.md).
+
 ### Docker (recommended)
 ```bash
 git clone https://github.com/pewdiepie-archdaemon/odysseus.git
