@@ -2004,6 +2004,70 @@ function initBackup() {
   });
 }
 
+/* ── Software Update ── */
+function _renderUpdateDetails(data) {
+  const git = data.git || {};
+  const install = data.install || {};
+  const update = data.update || {};
+  const bits = [];
+  if (git.branch) bits.push(`Branch: ${esc(git.branch)}`);
+  if (git.short_commit) bits.push(`Current: ${esc(git.short_commit)}`);
+  if (git.remote && git.remote_branch) bits.push(`Remote: ${esc(git.remote)}/${esc(git.remote_branch)}`);
+  if (git.remote_commit) bits.push(`Remote commit: ${esc(String(git.remote_commit).slice(0, 12))}`);
+  if (typeof git.behind === 'number' || typeof git.ahead === 'number') {
+    bits.push(`Ahead/behind: ${Number(git.ahead || 0)}/${Number(git.behind || 0)}`);
+  }
+  if (git.dirty) bits.push('Uncommitted changes present');
+  if (update.reason && update.reason !== 'up_to_date') bits.push(`Reason: ${esc(update.reason)}`);
+
+  const warnings = Array.isArray(git.warnings) ? git.warnings : [];
+  const errors = Array.isArray(git.errors) ? git.errors : [];
+  const commands = Array.isArray(install.manual_commands) ? install.manual_commands : [];
+  const commandHtml = commands.length
+    ? `<div style="margin-top:6px;opacity:0.8">Manual update path:</div><pre style="white-space:pre-wrap;margin:4px 0 0;font-size:11px;">${esc(commands.join('\n'))}</pre>`
+    : '';
+  const warnHtml = warnings.length || errors.length
+    ? `<div style="margin-top:6px;color:var(--red);">${esc([...warnings, ...errors].join(' '))}</div>`
+    : '';
+  return `${bits.map(x => `<div>${x}</div>`).join('')}${commandHtml}${warnHtml}`;
+}
+
+function initUpdateStatus() {
+  const btn = el('adm-updateCheckBtn');
+  const summary = el('adm-updateSummary');
+  const details = el('adm-updateDetails');
+  if (!btn || !summary || !details) return;
+  btn.addEventListener('click', async () => {
+    const prev = btn.textContent;
+    btn.disabled = true;
+    btn.textContent = 'Checking...';
+    summary.textContent = '';
+    summary.className = '';
+    details.innerHTML = '';
+    try {
+      const res = await fetch('/api/admin/update/status', { credentials: 'same-origin' });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.detail || 'Update check failed');
+      if (data.update && data.update.available) {
+        summary.textContent = 'Update available';
+        summary.className = 'admin-success';
+      } else if (data.update && data.update.checkable) {
+        summary.textContent = 'Up to date';
+        summary.className = 'admin-success';
+      } else {
+        summary.textContent = 'Could not check remote';
+        summary.className = 'admin-error';
+      }
+      details.innerHTML = _renderUpdateDetails(data);
+    } catch (e) {
+      summary.textContent = e.message || 'Update check failed';
+      summary.className = 'admin-error';
+    }
+    btn.disabled = false;
+    btn.textContent = prev;
+  });
+}
+
 /* ── Danger Zone ── */
 function initDangerZone() {
   // Per-category Danger Zone wipes. Each button declares its target
@@ -2044,7 +2108,7 @@ function initDangerZone() {
    ═══════════════════════════════════════════ */
 function initAll() {
   modalEl = el('settings-modal');
-  const inits = [initSignupToggle, initAddUser, initEndpointForm, initMcpForm, initCalDAV, initBackup, initDangerZone, () => settingsModule.initIntegrations()];
+  const inits = [initSignupToggle, initAddUser, initEndpointForm, initMcpForm, initCalDAV, initUpdateStatus, initBackup, initDangerZone, () => settingsModule.initIntegrations()];
   for (const fn of inits) {
     try { fn(); } catch (e) { console.error('Admin init error in', fn.name || 'anonymous', e); }
   }
