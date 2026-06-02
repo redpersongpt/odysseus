@@ -1,10 +1,11 @@
 import importlib.machinery
+import importlib.util
 import sys
 from pathlib import Path
 from types import ModuleType
 
 
-def _load_mail_cli():
+def _load_mail_cli(monkeypatch):
     helpers = ModuleType("routes.email_helpers")
     helpers._imap = object
     helpers._get_email_config = lambda account=None: {}
@@ -22,18 +23,21 @@ def _load_mail_cli():
     database_mod.SessionLocal = object
     database_mod.EmailAccount = object
 
-    sys.modules["routes.email_helpers"] = helpers
-    sys.modules["routes.email_pollers"] = pollers
-    sys.modules["core"] = core_mod
-    sys.modules["core.database"] = database_mod
+    monkeypatch.setitem(sys.modules, "routes.email_helpers", helpers)
+    monkeypatch.setitem(sys.modules, "routes.email_pollers", pollers)
+    monkeypatch.setitem(sys.modules, "core", core_mod)
+    monkeypatch.setitem(sys.modules, "core.database", database_mod)
 
     path = Path(__file__).resolve().parent.parent / "scripts" / "odysseus-mail"
     loader = importlib.machinery.SourceFileLoader("odysseus_mail_cli_under_test", str(path))
-    return loader.load_module()
+    spec = importlib.util.spec_from_loader(loader.name, loader)
+    module = importlib.util.module_from_spec(spec)
+    loader.exec_module(module)
+    return module
 
 
-def test_recipient_list_trims_to_cc_and_bcc():
-    cli = _load_mail_cli()
+def test_recipient_list_trims_to_cc_and_bcc(monkeypatch):
+    cli = _load_mail_cli(monkeypatch)
 
     assert cli._recipient_list(" a@example.com, ", "b@example.com", " c@example.com ") == [
         "a@example.com",
@@ -42,8 +46,8 @@ def test_recipient_list_trims_to_cc_and_bcc():
     ]
 
 
-def test_recipient_list_rejects_empty_envelope():
-    cli = _load_mail_cli()
+def test_recipient_list_rejects_empty_envelope(monkeypatch):
+    cli = _load_mail_cli(monkeypatch)
 
     try:
         cli._recipient_list(" , ", "", "")
