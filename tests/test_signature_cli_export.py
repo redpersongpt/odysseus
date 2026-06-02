@@ -1,32 +1,36 @@
 import importlib.machinery
+import importlib.util
 import sys
 from pathlib import Path
 from types import ModuleType
 
 
-def _load_signature_cli():
+def _load_signature_cli(monkeypatch):
     sqlalchemy_mod = ModuleType("sqlalchemy")
     sqlalchemy_mod.text = lambda value: value
     core_mod = ModuleType("core")
     database_mod = ModuleType("core.database")
     database_mod.engine = object()
-    sys.modules["sqlalchemy"] = sqlalchemy_mod
-    sys.modules["core"] = core_mod
-    sys.modules["core.database"] = database_mod
+    monkeypatch.setitem(sys.modules, "sqlalchemy", sqlalchemy_mod)
+    monkeypatch.setitem(sys.modules, "core", core_mod)
+    monkeypatch.setitem(sys.modules, "core.database", database_mod)
 
     path = Path(__file__).resolve().parent.parent / "scripts" / "odysseus-signature"
     loader = importlib.machinery.SourceFileLoader("odysseus_signature_cli_under_test", str(path))
-    return loader.load_module()
+    spec = importlib.util.spec_from_loader(loader.name, loader)
+    module = importlib.util.module_from_spec(spec)
+    loader.exec_module(module)
+    return module
 
 
-def test_decode_png_data_accepts_data_url():
-    cli = _load_signature_cli()
+def test_decode_png_data_accepts_data_url(monkeypatch):
+    cli = _load_signature_cli(monkeypatch)
 
     assert cli._decode_png_data("data:image/png;base64,aGVsbG8=") == b"hello"
 
 
-def test_decode_png_data_rejects_invalid_base64():
-    cli = _load_signature_cli()
+def test_decode_png_data_rejects_invalid_base64(monkeypatch):
+    cli = _load_signature_cli(monkeypatch)
 
     try:
         cli._decode_png_data("not valid!!!")
