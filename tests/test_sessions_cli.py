@@ -1,24 +1,29 @@
 import importlib.machinery
+import importlib.util
 import sys
 from pathlib import Path
 from types import ModuleType
 from types import SimpleNamespace
 
 
-def _load_sessions_cli():
+def _load_sessions_cli(monkeypatch):
     core_mod = ModuleType("core")
     database_mod = ModuleType("core.database")
     database_mod.SessionLocal = object
     database_mod.Session = object
-    sys.modules["core"] = core_mod
-    sys.modules["core.database"] = database_mod
+    monkeypatch.setitem(sys.modules, "core", core_mod)
+    monkeypatch.setitem(sys.modules, "core.database", database_mod)
+
     path = Path(__file__).resolve().parent.parent / "scripts" / "odysseus-sessions"
     loader = importlib.machinery.SourceFileLoader("odysseus_sessions_cli_under_test", str(path))
-    return loader.load_module()
+    spec = importlib.util.spec_from_loader(loader.name, loader)
+    module = importlib.util.module_from_spec(spec)
+    loader.exec_module(module)
+    return module
 
 
-def test_serialize_normalizes_numeric_counters():
-    cli = _load_sessions_cli()
+def test_serialize_normalizes_numeric_counters(monkeypatch):
+    cli = _load_sessions_cli(monkeypatch)
     session = SimpleNamespace(
         id="s1",
         name="chat",
