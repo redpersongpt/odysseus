@@ -6,6 +6,7 @@ legacy/corrupt research JSON is truthy, so `123[:200]` raised TypeError.
 import importlib.machinery
 import importlib.util
 from pathlib import Path
+from types import SimpleNamespace
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -32,3 +33,19 @@ def test_summarize_does_not_crash_on_non_string_query():
     out = cli._summarize("rp1", {"query": 123, "status": "done"})
     assert out["query"] == ""
     assert out["id"] == "rp1"
+
+
+def test_summarize_counts_only_source_lists():
+    cli = _load_cli()
+
+    assert cli._summarize("rp1", {"sources": "not-a-list"})["sources"] == 0
+    assert cli._summarize("rp2", {"sources": [{"url": "a"}, {"url": "b"}]})["sources"] == 2
+
+
+def test_report_raw_ignores_non_string_report(monkeypatch, capsys):
+    cli = _load_cli()
+    monkeypatch.setattr(cli, "_load", lambda _rp_id: {"result": ["bad"]})
+
+    cli.cmd_report(SimpleNamespace(id="rp1", raw=True))
+
+    assert capsys.readouterr().out == "\n"

@@ -49,6 +49,14 @@ def _preview_text(value, limit: int = 200) -> str:
     return text[:limit]
 
 
+def _text(value) -> str:
+    return value if isinstance(value, str) else ""
+
+
+def _source_count(value) -> int:
+    return len(value) if isinstance(value, list) else 0
+
+
 def _summarize(rp_id: str, data: dict) -> dict:
     return {
         "id": rp_id,
@@ -57,7 +65,7 @@ def _summarize(rp_id: str, data: dict) -> dict:
         "status": data.get("status") or "",
         "started_at": data.get("started_at") or "",
         "completed_at": data.get("completed_at") or "",
-        "sources": len(data.get("sources") or []),
+        "sources": _source_count(data.get("sources")),
         "stats": data.get("stats") or {},
     }
 
@@ -90,7 +98,7 @@ def cmd_report(args):
     data = _load(args.id)
     if data is None:
         fail(f"no research session {args.id!r}")
-    report = data.get("result") or data.get("raw_report") or ""
+    report = _text(data.get("result") or data.get("raw_report"))
     if args.raw:
         sys.stdout.write(report)
         if not report.endswith("\n"):
@@ -108,7 +116,7 @@ def cmd_search(args):
     if not _DATA_DIR.is_dir():
         emit([], args)
         return
-    q = args.query.lower()
+    q = _text(args.query).lower()
     out = []
     for path in _DATA_DIR.glob("*.json"):
         rp_id = path.stem
@@ -116,9 +124,9 @@ def cmd_search(args):
         if data is None:
             continue
         haystack = " ".join([
-            (data.get("query") or "").lower(),
-            (data.get("result") or "").lower(),
-            (data.get("category") or "").lower(),
+            _text(data.get("query")).lower(),
+            _text(data.get("result")).lower(),
+            _text(data.get("category")).lower(),
         ])
         if q in haystack:
             out.append(_summarize(rp_id, data))
