@@ -51,6 +51,10 @@ def _memory_entries(entries):
     return [e for e in entries or [] if isinstance(e, dict)]
 
 
+def _text(value) -> str:
+    return value if isinstance(value, str) else ""
+
+
 def cmd_list(args):
     entries = _memory_entries(_manager().load_all())
     if args.category:
@@ -65,9 +69,9 @@ def cmd_list(args):
 
 
 def cmd_search(args):
-    q = args.query.lower()
+    q = _text(args.query).lower()
     entries = _memory_entries(_manager().load_all())
-    matches = [e for e in entries if q in (e.get("text") or "").lower()]
+    matches = [e for e in entries if q in _text(e.get("text")).lower()]
     matches = sorted(matches, key=lambda e: e.get("timestamp", 0), reverse=True)
     emit(matches[: args.limit], args)
 

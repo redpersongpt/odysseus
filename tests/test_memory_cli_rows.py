@@ -3,6 +3,7 @@ import importlib.util
 import sys
 import types
 from pathlib import Path
+from types import SimpleNamespace
 from unittest.mock import MagicMock
 
 
@@ -29,3 +30,19 @@ def test_memory_entries_skips_invalid_rows(monkeypatch):
         "bad-row",
         None,
     ]) == [{"id": "m1", "text": "ok"}]
+
+
+def test_search_ignores_non_string_memory_text(monkeypatch):
+    cli = _load_cli(monkeypatch)
+    cli._mgr = MagicMock()
+    cli._mgr.load_all.return_value = [
+        {"id": "m1", "text": "hello world", "timestamp": 2},
+        {"id": "m2", "text": ["hello"], "timestamp": 3},
+        {"id": "m3", "text": None, "timestamp": 1},
+    ]
+    emitted = []
+    monkeypatch.setattr(cli, "emit", lambda value, args: emitted.append(value))
+
+    cli.cmd_search(SimpleNamespace(query="hello", limit=10))
+
+    assert emitted == [[{"id": "m1", "text": "hello world", "timestamp": 2}]]
