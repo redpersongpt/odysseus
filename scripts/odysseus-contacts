@@ -64,6 +64,10 @@ def _contact_rows(contacts):
     return [c for c in contacts or [] if isinstance(c, dict)]
 
 
+def _text(value) -> str:
+    return value if isinstance(value, str) else ""
+
+
 # ─── list ────────────────────────────────────────────────────────────
 
 def cmd_list(args) -> None:
@@ -80,11 +84,11 @@ def cmd_search(args) -> None:
     cfg = _get_carddav_config()
     if not cfg["url"]:
         fail("CardDAV not configured.")
-    q = args.query.lower()
+    q = _text(args.query).lower()
     contacts = _contact_rows(_fetch_contacts())
     matches = [
         c for c in contacts
-        if q in (c.get("name") or "").lower() or q in (c.get("email") or "").lower()
+        if q in _text(c.get("name")).lower() or q in _text(c.get("email")).lower()
     ]
     emit(matches, args)
 
