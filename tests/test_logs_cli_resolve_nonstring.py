@@ -6,7 +6,10 @@ return None (no match).
 """
 import importlib.machinery
 import importlib.util
+import time
 from pathlib import Path
+
+import pytest
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -23,3 +26,12 @@ def test_non_string_name_returns_none():
     cli = _load()
     assert cli._resolve(None) is None
     assert cli._resolve(123) is None
+
+
+def test_clean_cutoff_rejects_negative_days():
+    cli = _load()
+
+    with pytest.raises(SystemExit):
+        cli._clean_cutoff(-1)
+
+    assert cli._clean_cutoff(0) <= time.time()

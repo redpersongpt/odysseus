@@ -103,7 +103,7 @@ def cmd_clean(args):
     if not _TMUX_LOGS.is_dir():
         emit({"deleted": 0, "kept": 0}, args)
         return
-    cutoff = time.time() - args.days * 86400
+    cutoff = _clean_cutoff(args.days)
     deleted, kept = [], 0
     for p in _TMUX_LOGS.glob("*.log"):
         try:
@@ -115,6 +115,12 @@ def cmd_clean(args):
         except OSError:
             continue
     emit({"deleted": deleted, "kept": kept, "cutoff_days": args.days}, args)
+
+
+def _clean_cutoff(days: int) -> float:
+    if days < 0:
+        fail("--days must be 0 or greater")
+    return time.time() - days * 86400
 
 
 def _build_parser():
