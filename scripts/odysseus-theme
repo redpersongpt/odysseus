@@ -96,6 +96,15 @@ def _builtin_preset_names() -> list[str]:
     return re.findall(r"^  ([a-zA-Z_][\w]*)\s*:", body, re.MULTILINE)
 
 
+def _prefs_dict(value) -> dict:
+    return value if isinstance(value, dict) else {}
+
+
+def _theme_dict(prefs) -> dict:
+    theme = _prefs_dict(prefs).get("theme")
+    return theme if isinstance(theme, dict) else {}
+
+
 # ─── list ────────────────────────────────────────────────────────────
 
 def cmd_list(args):
@@ -109,7 +118,7 @@ def cmd_users(args):
     users = _load_prefs().get("_users", {})
     out = []
     for username, prefs in users.items():
-        theme = (prefs or {}).get("theme") or {}
+        theme = _theme_dict(prefs)
         out.append({
             "user": username,
             "preset": theme.get("name") or "",
@@ -128,7 +137,7 @@ def cmd_get(args):
     prefs = users.get(args.user)
     if prefs is None:
         fail(f"no prefs for user {args.user!r}")
-    theme = (prefs or {}).get("theme") or {}
+    theme = _theme_dict(prefs)
     if not theme:
         emit({"user": args.user, "theme": None}, args)
         return
@@ -145,8 +154,11 @@ def cmd_set(args):
         )
     data = _load_prefs()
     users = data.setdefault("_users", {})
-    user_prefs = users.setdefault(args.user, {})
-    theme = dict(user_prefs.get("theme") or {})
+    user_prefs = users.get(args.user)
+    if not isinstance(user_prefs, dict):
+        user_prefs = {}
+        users[args.user] = user_prefs
+    theme = dict(_theme_dict(user_prefs))
     theme["name"] = args.preset
     if not args.keep_colors:
         theme.pop("colors", None)
@@ -162,7 +174,7 @@ def cmd_export(args):
     prefs = users.get(args.user)
     if prefs is None:
         fail(f"no prefs for user {args.user!r}")
-    emit(prefs.get("theme") or {}, args)
+    emit(_theme_dict(prefs), args)
 
 
 def _build_parser():
