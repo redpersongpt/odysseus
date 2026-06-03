@@ -64,3 +64,10 @@ def test_exact_name_matches():
 def test_non_object_settings_return_empty_mapping():
     assert scrub_settings(["not", "settings"]) == {}
     assert scrub_settings("not settings") == {}
+
+
+def test_non_string_keys_do_not_crash_scrub():
+    out = scrub_settings({1: {"api_key": "nested"}, ("tuple",): "kept"})
+
+    assert out[1]["api_key"] == ""
+    assert out[("tuple",)] == "kept"

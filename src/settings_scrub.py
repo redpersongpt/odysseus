@@ -21,6 +21,8 @@ _SECRET_KEY_ALLOW = ("google_pse_cx",)  # public identifiers, not secrets
 
 
 def is_secret_key(name: str) -> bool:
+    if not isinstance(name, str):
+        return False
     n = (name or "").lower()
     if n in _SECRET_KEY_ALLOW:
         return False
