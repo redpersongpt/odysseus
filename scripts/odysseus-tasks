@@ -31,6 +31,13 @@ def _preview_text(value, limit: int = 200) -> str:
     return text[:limit] + ("…" if len(text) > limit else "")
 
 
+def _int_or_zero(value) -> int:
+    try:
+        return int(value or 0)
+    except (TypeError, ValueError):
+        return 0
+
+
 def _serialize_task(t: "ScheduledTask") -> dict:
     return {
         "id": t.id,
@@ -44,7 +51,7 @@ def _serialize_task(t: "ScheduledTask") -> dict:
         "last_run": t.last_run.isoformat() if t.last_run else "",
         "status": t.status,
         "model": t.model,
-        "run_count": t.run_count or 0,
+        "run_count": _int_or_zero(t.run_count),
         "cron_expression": t.cron_expression or "",
     }
 

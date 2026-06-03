@@ -3,6 +3,7 @@ import importlib.util
 import sys
 import types
 from pathlib import Path
+from types import SimpleNamespace
 from unittest.mock import MagicMock
 
 
@@ -29,3 +30,24 @@ def test_preview_text_ignores_non_string_values(monkeypatch):
     assert cli._preview_text(None) == ""
     assert cli._preview_text({"bad": "row"}) == ""
     assert cli._preview_text("x" * 201) == ("x" * 200) + "…"
+
+
+def test_serialize_task_normalizes_bad_run_count(monkeypatch):
+    cli = _load_cli(monkeypatch)
+    task = SimpleNamespace(
+        id="t1",
+        name="task",
+        task_type="prompt",
+        action="run",
+        prompt="hello",
+        schedule="manual",
+        scheduled_time="",
+        next_run=None,
+        last_run=None,
+        status="active",
+        model="m",
+        run_count="bad",
+        cron_expression=None,
+    )
+
+    assert cli._serialize_task(task)["run_count"] == 0
